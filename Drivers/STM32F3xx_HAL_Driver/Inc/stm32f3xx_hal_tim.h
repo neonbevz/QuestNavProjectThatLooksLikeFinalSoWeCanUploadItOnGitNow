@@ -973,7 +973,7 @@ typedef struct
   * @param  __PRESC__ specifies the active prescaler register new value.
   * @retval None
   */
-#define __HAL_TIM_SET_PRESCALER(__HANDLE__, __PRESC__)  ((__HANDLE__)->Instance->PSC = (__PRESC__))
+#define __HAL_TIM_SET_PRESCALER(__HANDLE__, __PRESC__)((__HANDLE__)->Instance->PSC = (__PRESC__))
 
 /**
   * @brief  Sets the TIM Counter Register value on runtime.

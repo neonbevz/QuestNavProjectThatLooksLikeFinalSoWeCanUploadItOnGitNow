@@ -45,14 +45,14 @@
 #include "gpio.h"
 
 /* USER CODE BEGIN Includes */
-
+#include <math.h>
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-
+#define SystemCoreClockInMHz (SystemCoreClock/1000000)
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -64,6 +64,40 @@ void SystemClock_Config(void);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
+
+// TIM6
+
+volatile uint32_t tim6_overflows = 0;
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+	if( htim->Instance == TIM6 ) {
+		++tim6_overflows;
+	}
+}
+
+inline void TIM6_reinit() {
+	HAL_TIM_Base_Stop(&htim6);
+	__HAL_TIM_SET_PRESCALER( &htim6, (SystemCoreClockInMHz-1) );
+	__HAL_TIM_SET_COUNTER( &htim6, 0 );
+	tim6_overflows = 0;
+	HAL_TIM_Base_Start_IT(&htim6);
+}
+
+inline uint32_t get_tim6_us() {
+	__HAL_TIM_DISABLE_IT(&htim6, TIM_IT_UPDATE);
+	//__disable_irq();
+	uint32_t res = tim6_overflows * 10000 + __HAL_TIM_GET_COUNTER(&htim6);
+	//__enable_irq();
+	__HAL_TIM_ENABLE_IT(&htim6, TIM_IT_UPDATE);
+	return res;
+}
+
+inline void udelay_TIM6(uint32_t useconds) {
+	uint32_t before = get_tim6_us();
+	while( get_tim6_us() < before+useconds){}
+}
+
+//
 
 /* USER CODE END 0 */
 
