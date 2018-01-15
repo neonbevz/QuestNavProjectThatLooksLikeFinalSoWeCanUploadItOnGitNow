@@ -47,6 +47,7 @@
 /* USER CODE BEGIN Includes */
 #include <math.h>
 #include "lcd5110.h"
+#include "vector_rotate.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -229,12 +230,12 @@ int main(void)
 
 	  cleanAccBuffer(accBuffer, accClean);
 	  cleanGyroBuffer(gyroBuffer, gyroClean);
-
+      rotateVector(gyroClean, gravity);
 	  addVectors(accClean, gravity);
 
 	  multiplyBySeconds(accClean, deltaTime);
 	  multiplyBySeconds(gyroClean, deltaTime);
-
+      rotateVecotr(gyroClean, currentPosition);
 	  addVectors(currentSpeed, accClean);
 
 	  multiplyBySeconds(currentSpeed, deltaTime);
