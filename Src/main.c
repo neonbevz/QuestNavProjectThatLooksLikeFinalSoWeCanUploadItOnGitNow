@@ -46,6 +46,7 @@
 
 /* USER CODE BEGIN Includes */
 #include <math.h>
+#include "lcd5110.h"
 /* USER CODE END Includes */
 
 /* Private variables ---------------------------------------------------------*/
@@ -99,6 +100,52 @@ inline void udelay_TIM6(uint32_t useconds) {
 
 //
 
+//extern void initialise_monitor_handles(void);
+void BSP_ACCELERO_GetXYZ(int16_t *pDataXYZ);
+void BSP_GYRO_GetXYZ(float* pfData);
+uint8_t BSP_ACCELERO_Init();
+uint8_t BSP_GYRO_Init();
+LCD5110_display lcd1;
+
+// Calculations
+
+void cleanAccBuffer(int16_t* buffer, double* clean) {
+	clean[0] = ((double)(buffer[0]) / 16 + 15) / 1000;
+	clean[1] = ((double)(buffer[1]) / 1633 + 2.06) / 1000;
+	clean[2] = ((double)(buffer[2]) / 1633) / 1000;
+}
+
+void cleanGyroBuffer(float* buffer, double* clean) {
+	clean[0] = ((double)(buffer[0]) + 439.88) / 1000;
+	clean[1] = ((double)(buffer[1]) - 91.8575) / 1000;
+	clean[2] = ((double)(buffer[2]) - 808.3075) / 1000;
+}
+
+void multiplyBySeconds(double* vector, int time) {
+	double seconds = (double)time / 1000000;
+	vector[0] *= seconds;
+	vector[1] *= seconds;
+	vector[2] *= seconds;
+}
+
+void addVectors(double* v1, double* v2) {
+	v1[0] += v2[0];
+	v1[1] += v2[1];
+	v1[2] += v2[2];
+}
+
+void resetAll(double* currentPosition, double* currentSpeed, double* currentAngle) {
+	currentPosition[0] = 0;
+	currentPosition[1] = 0;
+	currentPosition[2] = 0;
+	currentSpeed[0] = 0;
+	currentSpeed[1] = 0;
+	currentSpeed[2] = 0;
+	currentAngle[0] = 0;
+	currentAngle[1] = 0;
+	currentAngle[2] = 0;
+}
+
 /* USER CODE END 0 */
 
 int main(void)
@@ -133,12 +180,65 @@ int main(void)
 
   /* USER CODE BEGIN 2 */
 
+  // Inits
+  TIM6_reinit();
+  BSP_ACCELERO_Init();
+  BSP_GYRO_Init();
+  lcd1.hw_conf.spi_handle = &hspi2;
+  lcd1.hw_conf.spi_cs_pin =  LCD1_CS_Pin;
+  lcd1.hw_conf.spi_cs_port = LCD1_CS_GPIO_Port;
+  lcd1.hw_conf.rst_pin =  LCD1_RST_Pin;
+  lcd1.hw_conf.rst_port = LCD1_RST_GPIO_Port;
+  lcd1.hw_conf.dc_pin =  LCD1_DC_Pin;
+  lcd1.hw_conf.dc_port = LCD1_DC_GPIO_Port;
+  lcd1.def_scr = lcd5110_def_scr;
+  LCD5110_init(&lcd1.hw_conf, LCD5110_NORMAL_MODE, 0x40, 2, 3);
+
+  //
+
+  float gyroBuffer[3] = {0};
+  double gyroClean[3] = {0};
+  int16_t accBuffer[3] = {0};
+  double accClean[3] = {0};
+
+  double currentPosition[3] = {0, 0, 0};
+  double currentSpeed[3] = {0, 0, 0};
+  double currentAngle[3] = {0, 0, 0};
+  double gravity[3] = {0, 0, -9.81};
+
+  int lastTime = get_tim6_us();
+
+  int iter = 0;
+  double maxSpeed = 0;
+
   /* USER CODE END 2 */
+
+
+  // clk   din   dc   ce   rst
+  // pb13  pb15  pb12 pb14 pb11
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  BSP_GYRO_GetXYZ(gyroBuffer);
+	  BSP_ACCELERO_GetXYZ(accBuffer);
+
+	  int deltaTime = get_tim6_us() - lastTime;
+	  lastTime = get_tim6_us();
+
+	  cleanAccBuffer(accBuffer, accClean);
+	  cleanGyroBuffer(gyroBuffer, gyroClean);
+
+	  addVectors(accClean, gravity);
+
+	  multiplyBySeconds(accClean, deltaTime);
+	  multiplyBySeconds(gyroClean, deltaTime);
+
+	  addVectors(currentSpeed, accClean);
+
+	  multiplyBySeconds(currentSpeed, deltaTime);
+	  addVectors(currentPosition, currentSpeed);
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
