@@ -147,6 +147,19 @@ void resetAll(double* currentPosition, double* currentSpeed, double* currentAngl
 	currentAngle[2] = 0;
 }
 
+void copyVector(double* v1, double* v2) {
+	v1[0] = v2[0];
+	v1[1] = v2[1];
+	v1[2] = v2[2];
+}
+
+void averageVector(double* v1, double* v2, double* v3) {
+	v1[0] = (v1[0] + v2[0] + v3[0]) / 3;
+	v1[1] = (v1[1] + v2[1] + v3[1]) / 3;
+	v1[2] = (v1[2] + v2[2] + v3[2]) / 3;
+}
+
+
 /* USER CODE END 0 */
 
 int main(void)
@@ -212,6 +225,9 @@ int main(void)
   int iter = 0;
   double maxSpeed = 0;
 
+  double previousSpeed2[3] = {0};
+  double previousSpeed1[3] = {0};
+
   /* USER CODE END 2 */
 
 
@@ -240,6 +256,20 @@ int main(void)
 
 	  multiplyBySeconds(currentSpeed, deltaTime);
 	  addVectors(currentPosition, currentSpeed);
+	  
+	  copyVector(previousSpeed2, previousSpeed1);
+	  copyVector(previousSpeed1, currentSpeed);
+	  averageVector(currentSpeed, previousSpeed1, previousSpeed2);
+	  
+	  if (iter == 10) {
+		  LCD5110_set_cursor(0, 0, &lcd1);
+		  LCD5110_clear_scr(&lcd1);
+		  LCD5110_printf(&lcd1, BLACK, "X: %d\nY: %d\nZ:%d\n", (int)(previousSpeed1[0] * 1000), (int)(previousSpeed1[1] * 1000), (int)(previousSpeed1[2] * 1000));
+		  LCD5110_refresh(&lcd1);
+		  iter = 0;
+	  } else {
+		  iter++;
+	  }
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
